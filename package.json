@@ -1,0 +1,29 @@
+{
+  "name": "motortrace-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/motortrace/motortrace-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/motortrace/motortrace-backend/issues"
+  },
+  "homepage": "https://github.com/motortrace/motortrace-backend#readme",
+  "devDependencies": {
+    "@types/node": "^24.0.13",
+    "prisma": "^6.11.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.11.1"
+  }
+}
