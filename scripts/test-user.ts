@@ -6,6 +6,7 @@ async function main() {
     data: {
       email: 'simaak@motortrace.com',
       name: 'Simaak',
+      password: 'testpassword123',
     },
   })
 
