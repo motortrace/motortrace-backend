@@ -22,9 +22,9 @@ export const validateRole = (role: string): boolean => {
 export const validateRegistrationData = (data: RegistrationData): { isValid: boolean; errors: string[] } => {
   const errors: string[] = []
 
-  // Required fields
-  if (!data.email || !data.password || !data.name || !data.phone || !data.role) {
-    errors.push('Missing required fields: email, password, name, phone, role')
+  // Only require email and password for initial registration
+  if (!data.email || !data.password) {
+    errors.push('Missing required fields: email, password')
   }
 
   // Email validation
@@ -37,28 +37,8 @@ export const validateRegistrationData = (data: RegistrationData): { isValid: boo
     errors.push('Password must be at least 8 characters long')
   }
 
-  // Phone validation
-  if (data.phone && !validatePhone(data.phone)) {
-    errors.push('Invalid phone number format')
-  }
-
-  // Role validation
-  if (data.role && !validateRole(data.role)) {
-    errors.push('Invalid role. Must be car_owner, service_center, or part_seller')
-  }
-
-  // Role-specific validation
-  if (data.role === 'car_owner' && (!data.profileData?.vehicles || data.profileData.vehicles.length === 0)) {
-    errors.push('At least one vehicle is required for car_owner registration')
-  }
-
-  if (data.role === 'service_center' && !data.profileData?.businessDetails) {
-    errors.push('Business details are required for service_center registration')
-  }
-
-  if (data.role === 'part_seller' && !data.profileData?.shopDetails) {
-    errors.push('Shop details are required for part_seller registration')
-  }
+  // Do not require name, phone, or role at this stage
+  // Remove role-specific validation for initial registration
 
   return {
     isValid: errors.length === 0,
