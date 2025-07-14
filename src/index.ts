@@ -1,98 +1,93 @@
 import express from 'express'
 import cors from 'cors'
 import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-import { OAuth2Client } from 'google-auth-library'
-const googleClient =  new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+import { authenticateToken, AuthenticatedRequest } from './middleware/auth';
+
+// Import routes
+import authRoutes from './routes/auth'
+import vehicleRoutes from './routes/vehicles'
+import profileRoutes from './routes/profiles'
+import subscriptionRoutes from './routes/subscriptions'
+import prisma from './prisma';
 
 const app = express()
-const prisma = new PrismaClient()
 
-app.use(cors())
+// CORS configuration
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}))
+
 app.use(express.json())
 
-const JWT_SECRET = 'supersecret' // put in .env later
-
-// REGISTER
-app.post('/register', async (req, res) => {
-  const { email, password, name, role } = req.body
-
-  const existingUser = await prisma.user.findUnique({ where: { email } })
-  if (existingUser) return res.status(400).json({ error: 'User already exists' })
-
-  const hashed = await bcrypt.hash(password, 10)
-
-  const user = await prisma.user.create({
-    data: { email, password: hashed, name, role },
-  })
-
-  res.json({ message: 'User created', user: { id: user.id, email: user.email, role: user.role } })
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() })
 })
 
-// LOGIN
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body
-
-  const user = await prisma.user.findUnique({ where: { email } })
-  if (!user) return res.status(404).json({ error: 'User not found' })
-
-  const valid = await bcrypt.compare(password, user.password)
-  if (!valid) return res.status(401).json({ error: 'Invalid password' })
-
-  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' })
-
-  res.json({ message: 'Login success', token })
-})
-
-// GOOGLE LOGIN
-
-app.post('/auth/google', async(req, res) => {
-  const {idToken} = req.body
-
-  if (!idToken) {
-    return res.status(400).json({error: 'Missing the idToken'})
-  }
-
-  let payload
-
+// Test database connection
+app.get('/test-db', async (req, res) => {
   try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    })
-    payload = ticket.getPayload()
-  } catch(err) {
-    return res.status(401).json({error: 'Invalid google token'})
+    await prisma.$connect()
+    res.json({ message: 'Database connected' })
+  } catch (error) {
+    res.status(500).json({ error: 'Database connection failed' })
   }
+})
 
-  if (!payload) {
-    return res.status(400).json({error: 'Invalid token payload'})
-  }
-
-  const {email, name} = payload
-  if (!email) {
-    return res.status(400).json({error: 'Email missing in the token!'})
-  }
-
-  let user =  await prisma.user.findUnique({where: {email}})
-  if (!user) {
-    user =  await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: '', // dont need for google accounts
-        role: 'owner',
+// User status endpoint
+app.get('/user/status', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  const userId = req.user?.userId;
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        carOwnerProfile: true,
+        serviceCenterProfile: true,
+        partSellerProfile: true,
+        vehicles: true,
+        subscription: true,
       },
-    })
+    });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    // Determine setup completion
+    let isSetupComplete = false;
+    switch (user.role) {
+      case 'car_owner':
+        isSetupComplete = !!(user.carOwnerProfile && user.vehicles.length > 0);
+        break;
+      case 'service_center':
+        isSetupComplete = !!user.serviceCenterProfile;
+        break;
+      case 'part_seller':
+        isSetupComplete = !!user.partSellerProfile;
+        break;
+    }
+    const hasActiveSubscription = !!(user.subscription && user.subscription.status === 'active');
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isSetupComplete,
+      hasActiveSubscription
+    });
+  } catch (error) {
+    console.error('User status error:', error);
+    res.status(500).json({ error: 'Failed to fetch user status' });
   }
+});
 
-  const token = jwt.sign({
-    userId: user.id,
-    role: user.role
-  },
-  JWT_SECRET,
-  {expiresIn: '1d'})
-  res.json({message: 'Google login successful', token})
+// Mount routes
+app.use('/auth', authRoutes)
+app.use('/users', vehicleRoutes)
+app.use('/subscriptions', subscriptionRoutes)
+app.use('/profiles', profileRoutes)
 
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+  console.log(`Health check: http://localhost:${PORT}/health`)
+  console.log(`Database test: http://localhost:${PORT}/test-db`)
 })

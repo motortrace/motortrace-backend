@@ -9,11 +9,93 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String?   // hashed
-  name      String?
-  role      String   @default("owner") // can be: owner, service_center, seller
-  createdAt DateTime @default(now())
+  id                      Int      @id @default(autoincrement())
+  email                   String   @unique
+  password                String?   // hashed
+  name                    String?
+  phone                   String?
+  role                    String   @default("car_owner") // car_owner, service_center, part_seller
+  isRegistrationComplete  Boolean  @default(false) // track OAuth registration completion
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  // Role-specific profiles
+  carOwnerProfile     CarOwnerProfile?
+  serviceCenterProfile ServiceCenterProfile?
+  partSellerProfile   PartSellerProfile?
+  
+  // Vehicles (for car_owner)
+  vehicles Vehicle[]
+  
+  // Subscription (only for service_center and part_seller)
+  subscription     Subscription?
+}
+
+model CarOwnerProfile {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Vehicle {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  vehicleName String
+  model       String
+  year        Int
+  licensePlate String  @unique
+  color       String
+  vehicleType String   // sedan, suv, truck, etc.
+  isPrimary   Boolean  @default(false) // mark primary vehicle
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ServiceCenterProfile {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @unique
+  businessName          String
+  address               String
+  businessRegistrationNumber String
+  servicesOffered       String   // JSON string of services
+  operatingHours        String   // JSON string of hours
+  logo                  String?  // URL to logo
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model PartSellerProfile {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  shopName        String
+  address         String
+  categoriesSold  String   // JSON string of categories
+  inventoryCapacity String? // optional
+  contactPersonName String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  planType    String   // 'monthly' or 'yearly'
+  status      String   // 'active', 'cancelled', 'expired'
+  startDate   DateTime
+  endDate     DateTime
+  paymentData String   // JSON string of payment details
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
 }
 
