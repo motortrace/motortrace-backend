@@ -106,3 +106,13 @@ app.listen(PORT, () => {
   console.log(`Health check: http://localhost:${PORT}/health`)
   console.log(`Database test: http://localhost:${PORT}/test-db`)
 })
+
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
