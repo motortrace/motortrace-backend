@@ -22,7 +22,16 @@ router.get('/service-centers/:centerId/services', [
   handleValidationErrors
 ], async (req: Request, res: Response) => {
   const { centerId } = req.params;
-  const { status, category } = req.query;
+  let { status, category } = req.query;
+
+  // Ensure category is a string
+  if (Array.isArray(category)) {
+    category = category[0];
+  }
+  if (typeof category !== 'string') {
+    category = undefined;
+  }
+
   try {
     const services = await prisma.shopService.findMany({
       where: {
