@@ -69,6 +69,7 @@ model ServiceCenterProfile {
   updatedAt             DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+  shopServices ShopService[]
 }
 
 model PartSellerProfile {
@@ -97,5 +98,28 @@ model Subscription {
   updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model ServiceType {
+  id             Int            @id @default(autoincrement())
+  name           String         @unique
+  description    String?
+  shopServices   ShopService[]
+}
+
+model ShopService {
+  id               Int                   @id @default(autoincrement())
+  serviceCenterId  Int
+  serviceTypeId    Int?
+  name             String
+  description      String?
+  price            Float
+  unit             String                // e.g. hour, service
+  duration         Float?                // in hours
+  discount         Float?                @default(0)
+  isActive         Boolean               @default(true)
+
+  serviceCenter    ServiceCenterProfile  @relation(fields: [serviceCenterId], references: [id])
+  serviceType      ServiceType?          @relation(fields: [serviceTypeId], references: [id])
 }
 
