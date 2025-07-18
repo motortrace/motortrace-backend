@@ -33,6 +33,12 @@ router.post('/register', async (req: Request, res: Response) => {
   try {
     const registrationData: RegistrationData = req.body
 
+    // If mobile client, force role to 'car_owner'
+    const isMobile = req.headers['x-client-type'] === 'mobile';
+    if (isMobile) {
+      registrationData.role = 'car_owner';
+    }
+
     // Validate input
     const validation = validateRegistrationData(registrationData)
     if (!validation.isValid) {
@@ -62,28 +68,6 @@ router.post('/register', async (req: Request, res: Response) => {
         },
       })
 
-      // Create role-specific profile
-      if (role === 'car_owner' && profileData.vehicles) {
-        await tx.carOwnerProfile.create({
-          data: { userId: user.id }
-        })
-
-        for (let i = 0; i < profileData.vehicles.length; i++) {
-          const vehicle = profileData.vehicles[i]
-          await tx.vehicle.create({
-            data: {
-              userId: user.id,
-              vehicleName: vehicle.vehicleName,
-              model: vehicle.model,
-              year: vehicle.year,
-              licensePlate: vehicle.licensePlate,
-              color: vehicle.color,
-              vehicleType: vehicle.vehicleType,
-              isPrimary: i === 0,
-            }
-          })
-        }
-      }
 
       if (role === 'service_center' && profileData.businessDetails) {
         await tx.serviceCenterProfile.create({
@@ -281,7 +265,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
 // GOOGLE OAUTH
 router.post('/google', async (req: Request, res: Response) => {
   try {
-    const { idToken } = req.body
+    const idToken = req.body.idToken || req.body.token;
 
     if (!idToken) {
       return res.status(400).json({ error: 'Missing the idToken' })
