@@ -3,85 +3,86 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id                      Int      @id @default(autoincrement())
-  email                   String   @unique
-  password                String?   // hashed
-  name                    String?
-  phone                   String?
-  role                    String   @default("car_owner") // car_owner, service_center, part_seller
-  isRegistrationComplete  Boolean  @default(false) // track OAuth registration completion
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  id                     Int      @id @default(autoincrement())
+  email                  String   @unique
+  password               String? // hashed
+  name                   String?
+  phone                  String?
+  role                   String   @default("car_owner") // car_owner, service_center, part_seller
+  isRegistrationComplete Boolean  @default(false) // track OAuth registration completion
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Role-specific profiles
-  carOwnerProfile     CarOwnerProfile?
+  carOwnerProfile      CarOwnerProfile?
   serviceCenterProfile ServiceCenterProfile?
-  partSellerProfile   PartSellerProfile?
-  
+  partSellerProfile    PartSellerProfile?
+
   // Vehicles (for car_owner)
   vehicles Vehicle[]
-  
+
   // Subscription (only for service_center and part_seller)
-  subscription     Subscription?
+  subscription Subscription?
 }
 
 model CarOwnerProfile {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
 
 model Vehicle {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  vehicleName String
-  model       String
-  year        Int
-  licensePlate String  @unique
-  color       String
-  vehicleType String   // sedan, suv, truck, etc.
-  isPrimary   Boolean  @default(false) // mark primary vehicle
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  vehicleName  String
+  model        String
+  year         Int
+  licensePlate String   @unique
+  color        String
+  vehicleType  String // sedan, suv, truck, etc.
+  isPrimary    Boolean  @default(false) // mark primary vehicle
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
 
 model ServiceCenterProfile {
-  id                    Int      @id @default(autoincrement())
-  userId                Int      @unique
-  businessName          String
-  address               String
+  id                         Int      @id @default(autoincrement())
+  userId                     Int      @unique
+  businessName               String
+  address                    String
   businessRegistrationNumber String
-  servicesOffered       String   // JSON string of services
-  operatingHours        String   // JSON string of hours
-  logo                  String?  // URL to logo
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  servicesOffered            String // JSON string of services
+  operatingHours             String // JSON string of hours
+  logo                       String? // URL to logo
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
-  shopServices ShopService[]
+  user            User             @relation(fields: [userId], references: [id])
+  shopServices    ShopService[]
+  servicePackages ServicePackage[]
 }
 
 model PartSellerProfile {
-  id              Int      @id @default(autoincrement())
-  userId          Int      @unique
-  shopName        String
-  address         String
-  categoriesSold  String   // JSON string of categories
+  id                Int      @id @default(autoincrement())
+  userId            Int      @unique
+  shopName          String
+  address           String
+  categoriesSold    String // JSON string of categories
   inventoryCapacity String? // optional
   contactPersonName String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -89,11 +90,11 @@ model PartSellerProfile {
 model Subscription {
   id          Int      @id @default(autoincrement())
   userId      Int      @unique
-  planType    String   // 'monthly' or 'yearly'
-  status      String   // 'active', 'cancelled', 'expired'
+  planType    String // 'monthly' or 'yearly'
+  status      String // 'active', 'cancelled', 'expired'
   startDate   DateTime
   endDate     DateTime
-  paymentData String   // JSON string of payment details
+  paymentData String // JSON string of payment details
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -101,25 +102,50 @@ model Subscription {
 }
 
 model ServiceType {
-  id             Int            @id @default(autoincrement())
-  name           String         @unique
-  description    String?
-  shopServices   ShopService[]
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  description  String?
+  shopServices ShopService[]
 }
 
 model ShopService {
-  id               Int                   @id @default(autoincrement())
-  serviceCenterId  Int
-  serviceTypeId    Int?
-  name             String
-  description      String?
-  price            Float
-  unit             String                // e.g. hour, service
-  duration         Float?                // in hours
-  discount         Float?                @default(0)
-  isActive         Boolean               @default(true)
+  id              Int     @id @default(autoincrement())
+  serviceCenterId Int
+  serviceTypeId   Int?
+  name            String
+  description     String?
+  price           Float
+  unit            String // e.g. hour, service
+  duration        Float? // in hours
+  discount        Float?  @default(0)
+  isActive        Boolean @default(true)
 
-  serviceCenter    ServiceCenterProfile  @relation(fields: [serviceCenterId], references: [id])
-  serviceType      ServiceType?          @relation(fields: [serviceTypeId], references: [id])
+  serviceCenter     ServiceCenterProfile @relation(fields: [serviceCenterId], references: [id])
+  serviceType       ServiceType?         @relation(fields: [serviceTypeId], references: [id])
+  serviceInPackages ServiceInPackage[]
 }
 
+model ServicePackage {
+  id              Int                  @id @default(autoincrement())
+  name            String
+  description     String?
+  category        String?
+  isActive        Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  createdBy       String?
+  serviceCenterId Int
+  serviceCenter   ServiceCenterProfile @relation(fields: [serviceCenterId], references: [id])
+  services        ServiceInPackage[]
+  discountType    String? // 'percent' or 'fixed'
+  discountValue   Float? // value of discount
+  customTotal     Float? // optional custom total
+}
+
+model ServiceInPackage {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  serviceId Int
+  package   ServicePackage @relation(fields: [packageId], references: [id])
+  service   ShopService    @relation(fields: [serviceId], references: [id])
+}

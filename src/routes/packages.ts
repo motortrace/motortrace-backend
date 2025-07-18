@@ -1,6 +1,6 @@
 import express from 'express';
 import prisma from '../prisma';
-import { body, param, query, validationResult } from 'express-validator';
+import { body, param, validationResult } from 'express-validator';
 import { Request, Response, NextFunction } from 'express';
 
 const router = express.Router();
@@ -13,57 +13,24 @@ function handleValidationErrors(req: Request, res: Response, next: NextFunction)
   next();
 }
 
-// List all packages (with optional filters)
+// List all packages for a service center
 router.get('/service-centers/:centerId/packages', [
   param('centerId').isInt(),
-  query('status').optional().isIn(['active', 'inactive']),
   handleValidationErrors
 ], async (req: Request, res: Response) => {
   const { centerId } = req.params;
-  const { status } = req.query;
   try {
-    const packages = await prisma.packageTemplate.findMany({
-      where: {
-        centerId: Number(centerId),
-        ...(status ? { isActive: status === 'active' } : {})
-      },
+    const packages = await prisma.servicePackage.findMany({
+      where: { serviceCenterId: Number(centerId) },
       include: {
-        services: { include: { serviceTemplate: true } }
+        services: {
+          include: { service: true }
+        }
       }
     });
     res.json(packages);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch packages' });
-  }
-});
-
-// Create a new package
-router.post('/service-centers/:centerId/packages', [
-  param('centerId').isInt(),
-  body('name').isString(),
-  body('description').optional().isString(),
-  body('serviceTemplateIds').isArray(),
-  handleValidationErrors
-], async (req: Request, res: Response) => {
-  const { centerId } = req.params;
-  const { name, description, serviceTemplateIds } = req.body;
-  try {
-    const pkg = await prisma.packageTemplate.create({
-      data: {
-        name,
-        description,
-        centerId: Number(centerId),
-        services: {
-          create: serviceTemplateIds.map((id) => ({ serviceTemplateId: id }))
-        }
-      },
-      include: {
-        services: { include: { serviceTemplate: true } }
-      }
-    });
-    res.status(201).json(pkg);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create package' });
   }
 });
 
@@ -75,10 +42,12 @@ router.get('/service-centers/:centerId/packages/:packageId', [
 ], async (req: Request, res: Response) => {
   const { packageId } = req.params;
   try {
-    const pkg = await prisma.packageTemplate.findUnique({
+    const pkg = await prisma.servicePackage.findUnique({
       where: { id: Number(packageId) },
       include: {
-        services: { include: { serviceTemplate: true } }
+        services: {
+          include: { service: true }
+        }
       }
     });
     if (!pkg) return res.status(404).json({ error: 'Package not found' });
@@ -88,64 +57,103 @@ router.get('/service-centers/:centerId/packages/:packageId', [
   }
 });
 
-// Update a package (including services)
+// Create a new package
+router.post('/service-centers/:centerId/packages', [
+  param('centerId').isInt(),
+  body('name').isString(),
+  body('description').optional().isString(),
+  body('category').optional().isString(),
+  body('isActive').optional().isBoolean(),
+  body('createdBy').optional().isString(),
+  body('discountType').optional().isString(),
+  body('discountValue').optional().isNumeric(),
+  body('customTotal').optional().isNumeric(),
+  body('serviceIds').isArray(),
+  handleValidationErrors
+], async (req: Request, res: Response) => {
+  const { centerId } = req.params;
+  const {
+    name, description, category, isActive, createdBy,
+    discountType, discountValue, customTotal, serviceIds
+  } = req.body;
+  try {
+    const pkg = await prisma.servicePackage.create({
+      data: {
+        name,
+        description,
+        category,
+        isActive: isActive !== undefined ? isActive : true,
+        createdBy,
+        discountType,
+        discountValue,
+        customTotal,
+        serviceCenterId: Number(centerId),
+        services: {
+          create: serviceIds.map((serviceId: number) => ({ serviceId }))
+        }
+      },
+      include: {
+        services: { include: { service: true } }
+      }
+    });
+    res.status(201).json(pkg);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create package' });
+  }
+});
+
+// Update an existing package
 router.put('/service-centers/:centerId/packages/:packageId', [
   param('centerId').isInt(),
   param('packageId').isInt(),
   body('name').optional().isString(),
   body('description').optional().isString(),
-  body('serviceTemplateIds').optional().isArray(),
+  body('category').optional().isString(),
+  body('isActive').optional().isBoolean(),
+  body('createdBy').optional().isString(),
+  body('discountType').optional().isString(),
+  body('discountValue').optional().isNumeric(),
+  body('customTotal').optional().isNumeric(),
+  body('serviceIds').optional().isArray(),
   handleValidationErrors
 ], async (req: Request, res: Response) => {
   const { packageId } = req.params;
-  const { name, description, serviceTemplateIds } = req.body;
+  const {
+    name, description, category, isActive, createdBy,
+    discountType, discountValue, customTotal, serviceIds
+  } = req.body;
   try {
     // Update package details
-    const pkg = await prisma.packageTemplate.update({
+    const pkg = await prisma.servicePackage.update({
       where: { id: Number(packageId) },
       data: {
-        ...(name && { name }),
-        ...(description && { description })
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(category !== undefined && { category }),
+        ...(isActive !== undefined && { isActive }),
+        ...(createdBy !== undefined && { createdBy }),
+        ...(discountType !== undefined && { discountType }),
+        ...(discountValue !== undefined && { discountValue }),
+        ...(customTotal !== undefined && { customTotal })
       }
     });
     // Update services if provided
-    if (serviceTemplateIds) {
+    if (serviceIds) {
       // Remove all existing
-      await prisma.packageTemplateService.deleteMany({ where: { packageTemplateId: Number(packageId) } });
+      await prisma.serviceInPackage.deleteMany({ where: { packageId: Number(packageId) } });
       // Add new
-      await prisma.packageTemplateService.createMany({
-        data: serviceTemplateIds.map((id) => ({ packageTemplateId: Number(packageId), serviceTemplateId: id }))
+      await prisma.serviceInPackage.createMany({
+        data: serviceIds.map((serviceId: number) => ({ packageId: Number(packageId), serviceId }))
       });
     }
     // Return updated package
-    const updated = await prisma.packageTemplate.findUnique({
+    const updated = await prisma.servicePackage.findUnique({
       where: { id: Number(packageId) },
-      include: { services: { include: { serviceTemplate: true } } }
+      include: { services: { include: { service: true } } }
     });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update package' });
-  }
-});
-
-// Toggle active/inactive (requires isActive field in schema)
-router.patch('/service-centers/:centerId/packages/:packageId/toggle', [
-  param('centerId').isInt(),
-  param('packageId').isInt(),
-  handleValidationErrors
-], async (req: Request, res: Response) => {
-  const { packageId } = req.params;
-  try {
-    const pkg = await prisma.packageTemplate.findUnique({ where: { id: Number(packageId) } });
-    if (!pkg) return res.status(404).json({ error: 'Package not found' });
-    // If isActive is not in schema, skip this endpoint or add it
-    const updated = await prisma.packageTemplate.update({
-      where: { id: Number(packageId) },
-      data: { isActive: !pkg.isActive }
-    });
-    res.json(updated);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to toggle package status' });
   }
 });
 
@@ -157,41 +165,12 @@ router.delete('/service-centers/:centerId/packages/:packageId', [
 ], async (req: Request, res: Response) => {
   const { packageId } = req.params;
   try {
-    await prisma.packageTemplate.delete({ where: { id: Number(packageId) } });
+    // Delete all ServiceInPackage entries first (to avoid FK constraint errors)
+    await prisma.serviceInPackage.deleteMany({ where: { packageId: Number(packageId) } });
+    await prisma.servicePackage.delete({ where: { id: Number(packageId) } });
     res.status(204).end();
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete package' });
-  }
-});
-
-// Metrics endpoint
-router.get('/service-centers/:centerId/packages/metrics', [
-  param('centerId').isInt(),
-  handleValidationErrors
-], async (req: Request, res: Response) => {
-  const { centerId } = req.params;
-  try {
-    const [total] = await Promise.all([
-      prisma.packageTemplate.count({ where: { centerId: Number(centerId) } })
-    ]);
-    res.json({ total });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch metrics' });
-  }
-});
-
-// Analytics endpoint (example: most popular packages)
-router.get('/service-centers/:centerId/packages/analytics', [
-  param('centerId').isInt(),
-  handleValidationErrors
-], async (req: Request, res: Response) => {
-  const { centerId } = req.params;
-  try {
-    // Example: most used packages (if tracked in work orders, otherwise skip)
-    // Placeholder: return empty
-    res.json({ popular: [] });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 });
 

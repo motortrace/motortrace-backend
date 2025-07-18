@@ -10,6 +10,7 @@ import profileRoutes from './routes/profiles'
 import subscriptionRoutes from './routes/subscriptions'
 import serviceTypesRouter from './routes/serviceTypes';
 import servicesRouter from './routes/services';
+import packagesRoutes from './routes/packages';
 import prisma from './prisma';
 
 const app = express()
@@ -99,6 +100,7 @@ app.use('/subscriptions', subscriptionRoutes)
 app.use('/profiles', profileRoutes)
 app.use('/service-types', serviceTypesRouter);
 app.use('/', servicesRouter);
+app.use('/', packagesRoutes);
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
