@@ -65,7 +65,7 @@ router.post('/register', async (req: Request, res: Response) => {
           name, 
           phone,
           role,
-          isRegistrationComplete: true
+          isRegistrationComplete:  !isMobile
         },
       })
 
@@ -154,6 +154,7 @@ router.post('/login', async (req: Request, res: Response) => {
         phone: user.phone,
         role: user.role
       },
+      isRegistrationComplete: user.isRegistrationComplete,
       setupStatus,
       requiresSetup: setupStatus.missingSteps.length > 0
     })
