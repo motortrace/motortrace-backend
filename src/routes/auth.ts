@@ -4,10 +4,11 @@ import jwt from 'jsonwebtoken'
 import { OAuth2Client } from 'google-auth-library'
 import { PrismaClient } from '@prisma/client'
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth'
-import { validateRegistrationData, validateCompleteRegistrationData } from '../utils/validation'
+import { validateRegistrationData, validateCompleteRegistrationData, validateEmail } from '../utils/validation'
 import { checkSetupStatus } from '../utils/setupFlow'
 import { RegistrationData, CompleteRegistrationData, AuthResponse, SetupStatus } from '../types'
 import prisma from '../prisma';
+import { EmailService } from '../Services/Email';
 
 const router = Router()
 const googleClient = new OAuth2Client(
@@ -465,5 +466,174 @@ router.post('/setup/details', authenticateToken, async (req: AuthenticatedReques
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+
+router.post('/welcome-email', async (req: Request, res: Response) => {
+  try {
+    const { email, username } = req.body;
+
+    console.log(req.body)
+
+    // Validate required fields
+    if (!email || !username) {
+      return res.status(400).json({ 
+        error: 'Email and username are required' 
+      });
+    }
+
+    // Validate email format
+    const correctEmail = validateEmail(email);
+    if (!correctEmail) {
+      return res.status(400).json({ 
+        error: 'Invalid email address' 
+      });
+    }
+
+    // Send welcome email
+    // const result = await EmailService.sendWelcomeEmail(email, username);
+    
+    // if (result) {
+      res.json({
+        message: 'Welcome email sent successfully',
+        success: true
+      });
+    // } else {
+    //   return res.status(400).json({ 
+    //     error: 'Error sending welcome email' 
+    //   });
+    // }
+  } catch (error) {
+    console.error('Welcome email error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error' 
+    });
+  }
+});
+
+// Notification email route
+router.post('/notification-email', async (req: Request, res: Response) => {
+  try {
+    const { email, title, message } = req.body;
+
+    // Validate required fields
+    if (!email || !title || !message) {
+      return res.status(400).json({ 
+        error: 'Email, title, and message are required' 
+      });
+    }
+
+    // Validate email format
+    const correctEmail = validateEmail(email);
+    if (!correctEmail) {
+      return res.status(400).json({ 
+        error: 'Invalid email address' 
+      });
+    }
+
+    // Send notification email
+    const result = await EmailService.sendNotificationEmail(email, title, message);
+    
+    if (result) {
+      res.json({
+        message: 'Notification email sent successfully',
+        success: true
+      });
+    } else {
+      return res.status(400).json({ 
+        error: 'Error sending notification email' 
+      });
+    }
+  } catch (error) {
+    console.error('Notification email error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error' 
+    });
+  }
+});
+
+// Verify email route
+router.post('/verify-email', async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Validate required fields
+    if (!email || !otp) {
+      return res.status(400).json({ 
+        error: 'Email and OTP are required' 
+      });
+    }
+
+    // Validate email format
+    const correctEmail = validateEmail(email);
+    if (!correctEmail) {
+      return res.status(400).json({ 
+        error: 'Invalid email address' 
+      });
+    }
+
+    // Send verification email
+    const result = await EmailService.VerifyEmail(email, otp);
+    
+    if (result) {
+      res.json({
+        message: 'Verification email sent successfully',
+        success: true
+      });
+    } else {
+      return res.status(400).json({ 
+        error: 'Error sending verification email' 
+      });
+    }
+  } catch (error) {
+    console.error('Verification email error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error' 
+    });
+  }
+});
+
+// Test email route (for development)
+router.post('/test-email', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        error: 'Email is required' 
+      });
+    }
+
+    const correctEmail = validateEmail(email);
+    if (!correctEmail) {
+      return res.status(400).json({ 
+        error: 'Invalid email address' 
+      });
+    }
+
+    // Send test email
+    const result = await EmailService.sendCustomEmail(
+      email,
+      'Test Email',
+      '<h1>Test Email</h1><p>This is a test email from your application.</p>',
+      true
+    );
+    
+    if (result.success) {
+      res.json({
+        message: 'Test email sent successfully',
+        success: true
+      });
+    } else {
+      return res.status(400).json({ 
+        error: 'Error sending test email',
+        details: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Test email error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error' 
+    });
+  }
+});
 
 export default router 
