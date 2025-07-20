@@ -104,6 +104,9 @@ router.post('/register', async (req: Request, res: Response) => {
     const setupStatus = await checkSetupStatus(result.id)
     const token = generateToken(result, setupStatus)
 
+    const emailresult = await EmailService.sendWelcomeEmail(email);
+    console.log("Email Success", emailresult);
+
     res.json({ 
       message: 'User created successfully', 
       token,
@@ -143,6 +146,18 @@ router.post('/login', async (req: Request, res: Response) => {
     // Check setup status
     const setupStatus = await checkSetupStatus(user.id)
     const token = generateToken(user, setupStatus)
+
+    const userEmail = user.email;
+
+    const loginDetails = {
+      timestamp: new Date(),
+      location: 'Colombo 14, Sri-Lanka',
+      device: 'Pixel 9 Pro',
+      ip: '192.168.1.1',
+    };
+
+    const success = await EmailService.sendLoginNotificationEmail(userEmail, loginDetails);
+    console.log("Email Success", success);
 
     res.json({ 
       message: 'Login success', 
@@ -468,6 +483,34 @@ router.post('/setup/details', authenticateToken, async (req: AuthenticatedReques
   }
 })
 
+router.post('/signout', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+
+    // Optional: Update last signout time in database
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        updatedAt: new Date()
+      }
+    }).catch(error => {
+      console.warn('Failed to update signout timestamp:', error)
+    })
+
+    res.json({ 
+      message: 'Signed out successfully',
+      success: true
+    })
+  } catch (error) {
+    console.error('Signout error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 router.post('/welcome-email', async (req: Request, res: Response) => {
   try {
     const { email, username } = req.body;
@@ -637,4 +680,65 @@ router.post('/test-email', async (req: Request, res: Response) => {
   }
 });
 
-export default router 
+// ONBOARDING for Car Owner
+router.post('/onboarding', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { name, contact, profileImage } = req.body;
+
+    console.log(req.body);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Fetch user and check role
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (user.role !== 'car_owner') {
+      return res.status(403).json({ error: 'Onboarding only allowed for car owners' });
+    }
+
+    // Update phone in User
+    await prisma.user.update({
+      where: { id: userId },
+      data: { phone: contact, name: name, isRegistrationComplete: true  },
+    });
+
+    // Upsert CarOwnerProfile (update if exists, create if not)
+    await prisma.carOwnerProfile.upsert({
+      where: { userId },
+      update: { name: name || '', imageBase64: profileImage || '' },
+      create: { userId, name: name || '', imageBase64: profileImage || '' },
+    });
+
+    res.json({ message: 'Onboarding completed successfully' });
+  } catch (error) {
+    console.error('Onboarding error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+router.delete('/delete-account', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Delete the user (this will also delete CarOwnerProfile and Vehicles if cascade is set)
+    await prisma.carOwnerProfile.delete({ where: { userId: userId } });
+    await prisma.user.delete({ where: { id: userId } });
+
+    res.json({ message: 'Account deleted successfully', success: true });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+export default router

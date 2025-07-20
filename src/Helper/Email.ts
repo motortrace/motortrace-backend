@@ -37,8 +37,8 @@ const defaultConfig: EmailConfig = {
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: process.env.SMTP_SECURE === 'true' || false,
   auth: {
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
+    user: process.env.GMAIL_USER || '',
+    pass: process.env.GMAIL_APP_PASSWORD || '',
   },
 };
 
@@ -207,16 +207,16 @@ export const createEmailTemplate = (
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to {{companyName}}</title>
+        <title>Welcome to MotorTrace</title>
         ${baseStyles}
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to {{companyName}}!</h1>
+            <h1>Welcome to MotorTrace!</h1>
           </div>
           <div class="content">
-            <h2>Hello {{name}}! 👋</h2>
+            <h2>Hello user {{name}}! 👋</h2>
             <p>We're absolutely thrilled to have you join our community. Your journey with us starts now, and we couldn't be more excited to be part of it.</p>
             
             <div class="highlight">
@@ -233,7 +233,7 @@ export const createEmailTemplate = (
             <p>If you have any questions, our support team is here to help. Just reply to this email or visit our help center.</p>
           </div>
           <div class="footer">
-            <p>Best regards,<br><strong>The {{companyName}} Team</strong></p>
+            <p>Best regards,<br><strong>The MotorTrace Team</strong></p>
             <div class="social-links">
               <a href="{{socialLinks.twitter}}">Twitter</a>
               <a href="{{socialLinks.linkedin}}">LinkedIn</a>
@@ -244,6 +244,137 @@ export const createEmailTemplate = (
       </body>
       </html>
     `,
+  login: `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Login Alert - MotorTrace </title>
+      ${baseStyles}
+      <style>
+        .security-alert {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 15px;
+          border-radius: 8px;
+          margin: 20px 0;
+          text-align: center;
+        }
+        .login-details {
+          background: #f8f9fa;
+          border: 1px solid #e9ecef;
+          border-radius: 8px;
+          padding: 20px;
+          margin: 20px 0;
+        }
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+          border-bottom: none;
+        }
+        .detail-label {
+          font-weight: 600;
+          color: #495057;
+        }
+        .detail-value {
+          color: #6c757d;
+          text-align: right;
+        }
+        .warning-btn {
+          background: #dc3545;
+          color: white;
+          padding: 12px 24px;
+          border: none;
+          border-radius: 6px;
+          text-decoration: none;
+          display: inline-block;
+          font-weight: 600;
+          margin: 10px 5px;
+        }
+        .safe-btn {
+          background: #28a745;
+          color: white;
+          padding: 12px 24px;
+          border: none;
+          border-radius: 6px;
+          text-decoration: none;
+          display: inline-block;
+          font-weight: 600;
+          margin: 10px 5px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🔐 Security Alert</h1>
+        </div>
+        <div class="content">
+          <div class="security-alert">
+            <h2>New Login Detected</h2>
+            <p>Someone just logged into your MotorTrace account</p>
+          </div>
+          
+          <p>Hello {{name}},</p>
+          <p>We detected a new login to your account. If this was you, no action is needed. If you don't recognize this activity, please secure your account immediately.</p>
+          
+          <div class="login-details">
+            <h3>📊 Login Details</h3>
+            <div class="detail-row">
+              <span class="detail-label">Date & Time:</span>
+              <span class="detail-value">{{timestamp}}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Location:</span>
+              <span class="detail-value">{{location}}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Device:</span>
+              <span class="detail-value">{{device}}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">IP Address:</span>
+              <span class="detail-value">{{ip}}</span>
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{secureAccountLink}}" class="warning-btn">This Wasn't Me - Secure Account</a>
+            <a href="{{confirmLoginLink}}" class="safe-btn">This Was Me - All Good</a>
+          </div>
+          
+          <div class="highlight">
+            <p><strong>🛡️ Security Tips:</strong></p>
+            <p>• Use a strong, unique password<br>
+            • Enable two-factor authentication<br>
+            • Keep your recovery email updated<br>
+            • Log out from shared devices</p>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <p><strong>Why do we send these emails?</strong><br>
+          We send login notifications to help protect your account from unauthorized access. These alerts help you stay informed about account activity.</p>
+          
+          <p>If you have questions about this login or need help securing your account, contact our support team immediately.</p>
+        </div>
+        <div class="footer">
+          <p>Stay secure,<br><strong>The MotorTrace Security Team</strong></p>
+          <div class="social-links">
+            <a href="{{supportLink}}">Support</a>
+            <a href="{{securityCenterLink}}">Security Center</a>
+            <a href="{{socialLinks.website}}">Website</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `,
 
     notification: `
       <!DOCTYPE html>
@@ -281,7 +412,7 @@ export const createEmailTemplate = (
           <div class="footer">
             <p>{{signature}}</p>
             <p style="margin-top: 10px; font-size: 12px;">
-              You received this notification because you're subscribed to {{companyName}} updates.
+              You received this notification because you're subscribed to MotorTrace updates.
               <a href="{{unsubscribeLink}}" style="color: #6c757d;">Unsubscribe</a>
             </p>
           </div>
@@ -307,7 +438,7 @@ export const createEmailTemplate = (
           <div class="content">
             <h2>Reset Your Password</h2>
             <p>Hi {{name}},</p>
-            <p>We received a request to reset your password for your {{companyName}} account. If you made this request, click the button below to set a new password.</p>
+            <p>We received a request to reset your password for your MotorTrace account. If you made this request, click the button below to set a new password.</p>
             
             <a href="{{resetLink}}" class="btn">Reset Password</a>
             
@@ -322,7 +453,7 @@ export const createEmailTemplate = (
             <p style="word-break: break-all; color: #6c757d; font-size: 14px;">{{resetLink}}</p>
           </div>
           <div class="footer">
-            <p>Stay secure,<br><strong>The {{companyName}} Security Team</strong></p>
+            <p>Stay secure,<br><strong>The MotorTrace Security Team</strong></p>
             <p style="margin-top: 10px; font-size: 12px; color: #6c757d;">
               If you're having trouble, contact our support team at {{supportEmail}}
             </p>
@@ -415,7 +546,7 @@ export const createEmailTemplate = (
             <p><strong>Payment Terms:</strong> {{paymentTerms}}</p>
           </div>
           <div class="footer">
-            <p>Thank you for your business!<br><strong>{{companyName}}</strong></p>
+            <p>Thank you for your business!<br><strong> MotorTrace </strong></p>
           </div>
         </div>
       </body>
@@ -457,7 +588,7 @@ export const createEmailTemplate = (
             <p>{{additionalNotes}}</p>
           </div>
           <div class="footer">
-            <p>Best regards,<br><strong>{{companyName}}</strong></p>
+            <p>Best regards,<br><strong>MotorTrace</strong></p>
           </div>
         </div>
       </body>
@@ -511,42 +642,6 @@ export const createEmailTemplate = (
   });
 
   return template;
-};
-
-// Usage examples:
-export const emailExamples = {
-  welcome: () => createEmailTemplate('welcome', {
-    name: 'John Doe',
-    companyName: 'TechCorp',
-    onboardingLink: 'https://app.techcorp.com/onboarding',
-    socialLinks: {
-      twitter: 'https://twitter.com/techcorp',
-      linkedin: 'https://linkedin.com/company/techcorp',
-      website: 'https://techcorp.com'
-    }
-  }),
-
-  notification: () => createEmailTemplate('notification', {
-    title: 'System Maintenance Notice',
-    subtitle: 'Scheduled Maintenance Tonight',
-    message: 'We will be performing scheduled maintenance on our systems tonight from 2:00 AM to 4:00 AM EST.',
-    actionRequired: true,
-    actionMessage: 'Please save your work and log out before the maintenance window.',
-    actionLink: 'https://status.techcorp.com',
-    actionText: 'View Status Page',
-    additionalInfo: 'We apologize for any inconvenience this may cause.',
-    signature: 'The TechCorp Operations Team',
-    companyName: 'TechCorp',
-    unsubscribeLink: 'https://techcorp.com/unsubscribe'
-  }),
-
-  reset: () => createEmailTemplate('reset', {
-    name: 'John Doe',
-    companyName: 'TechCorp',
-    resetLink: 'https://app.techcorp.com/reset-password?token=abc123',
-    expiryTime: '24 hours',
-    supportEmail: 'support@techcorp.com'
-  })
 };
 
 // Validate email address

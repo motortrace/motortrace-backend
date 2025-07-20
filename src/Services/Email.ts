@@ -3,16 +3,45 @@ import { sendEmail, sendBulkEmails, createEmailTemplate, validateEmail, EmailDat
 // Email service class
 export class EmailService {
   // Send welcome email
-  static async sendWelcomeEmail(userEmail: string, userName: string): Promise<boolean> {
+  static async sendWelcomeEmail(userEmail: string): Promise<boolean> {
     if (!validateEmail(userEmail)) {
       throw new Error('Invalid email address');
     }
 
-    const emailBody = createEmailTemplate('welcome', { name: userName });
+    const emailBody = createEmailTemplate('welcome', { name: userEmail });
     
     const emailData: EmailData = {
       to: userEmail,
       subject: 'Welcome to Our Platform!',
+      body: emailBody,
+      isHtml: true,
+    };
+
+    const result = await sendEmail(emailData);
+    return result.success;
+  }
+
+  static async sendLoginNotificationEmail(userEmail: string, loginDetails?: {
+    timestamp?: Date;
+    location?: string;
+    device?: string;
+    ip?: string;
+  }): Promise<boolean> {
+    if (!validateEmail(userEmail)) {
+      throw new Error('Invalid email address');
+    }
+
+    const emailBody = createEmailTemplate('login', { 
+      name: userEmail,
+      timestamp: loginDetails?.timestamp || new Date(),
+      location: loginDetails?.location || 'Unknown location',
+      device: loginDetails?.device || 'Unknown device',
+      ip: loginDetails?.ip || 'Hidden'
+    });
+
+    const emailData: EmailData = {
+      to: userEmail,
+      subject: 'Security Alert: New Login to Your Account',
       body: emailBody,
       isHtml: true,
     };
