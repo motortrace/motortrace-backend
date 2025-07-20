@@ -721,8 +721,6 @@ router.post('/onboarding', authenticateToken, async (req: AuthenticatedRequest, 
   }
 });
 
-
-
 router.delete('/delete-account', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -738,6 +736,61 @@ router.delete('/delete-account', authenticateToken, async (req: AuthenticatedReq
   } catch (error) {
     console.error('Delete account error:', error);
     res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+const otpStore = new Map();
+
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore.set(email, { otp, expires: Date.now() + 10 * 60 * 1000 }); // 10 min expiry
+
+  // Send OTP email
+  await EmailService.sendCustomEmail(
+    email,
+    'Your OTP Code',
+    `<h1>Your OTP: ${otp}</h1><p>Valid for 10 minutes.</p>`,
+    true
+  );
+
+  res.json({ message: 'OTP sent to email' });
+});
+
+router.post('/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  const record = otpStore.get(email);
+  if (!record || record.otp !== otp || Date.now() > record.expires) {
+    return res.status(400).json({ error: 'Invalid or expired OTP' });
+  }
+  otpStore.delete(email);
+
+  // Generate a short-lived reset token (JWT)
+  const resetToken = jwt.sign({ email, type: 'reset' }, JWT_SECRET, { expiresIn: '15m' });
+  res.json({ message: 'OTP verified', resetToken });
+});
+
+router.post('/reset-password', async (req, res) => {
+  const { email, password, token } = req.body;
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return res.status(400).json({ error: 'Invalid token' });
+    }
+    if (payload.email !== email || payload.type !== 'reset') {
+      return res.status(400).json({ error: 'Invalid token' });
+    }
+    const hashed = await bcrypt.hash(password, 10);
+    await prisma.user.update({ where: { email }, data: { password: hashed } });
+    res.json({ message: 'Password reset successful' });
+  } catch (err) {
+    res.status(400).json({ error: 'Invalid or expired token' });
   }
 });
 
