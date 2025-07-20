@@ -102,4 +102,10 @@ export interface AuthResponse {
   user: UserResponse
   setupStatus?: SetupStatus
   requiresSetup?: boolean
+}
+
+export interface OnboardingRequest {
+  name: string;
+  contact: string;
+  profileImage: string; // base64 string or image URL, as expected by your backend
 } 
