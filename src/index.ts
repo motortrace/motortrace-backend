@@ -95,7 +95,7 @@ app.get('/user/status', authenticateToken, async (req: AuthenticatedRequest, res
 
 // Mount routes
 app.use('/auth', authRoutes)
-app.use('/users', vehicleRoutes)
+app.use('/vehicles', vehicleRoutes)
 app.use('/subscriptions', subscriptionRoutes)
 app.use('/profiles', profileRoutes)
 app.use('/service-types', serviceTypesRouter);

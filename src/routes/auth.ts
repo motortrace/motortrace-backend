@@ -423,7 +423,6 @@ router.post('/setup/details', authenticateToken, async (req: AuthenticatedReques
               year: vehicle.year,
               licensePlate: vehicle.licensePlate,
               color: vehicle.color,
-              vehicleType: vehicle.vehicleType,
               isPrimary: i === 0,
             }
           })
