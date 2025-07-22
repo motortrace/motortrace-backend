@@ -50,7 +50,10 @@ model Vehicle {
   year         Int
   licensePlate String   @unique
   color        String
-  vehicleType  String // sedan, suv, truck, etc.
+  image        String?
+  nickname     String?
+  status       String?
+  statusText   String?
   isPrimary    Boolean  @default(false) // mark primary vehicle
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
