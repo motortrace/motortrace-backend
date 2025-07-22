@@ -11,6 +11,8 @@ import subscriptionRoutes from './routes/subscriptions'
 import serviceTypesRouter from './routes/serviceTypes';
 import servicesRouter from './routes/services';
 import packagesRoutes from './routes/packages';
+import createServiceCentersRouter from './routes/createServiceCenters';
+import createSparePartSellersRouter from './routes/createSparePartSellers';
 import prisma from './prisma';
 
 const app = express()
@@ -101,6 +103,8 @@ app.use('/profiles', profileRoutes)
 app.use('/service-types', serviceTypesRouter);
 app.use('/', servicesRouter);
 app.use('/', packagesRoutes);
+app.use('/admin/createServiceCenter', createServiceCentersRouter);
+app.use('/admin/createSparePartsSeller', createSparePartSellersRouter);
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
